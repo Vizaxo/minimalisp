@@ -40,38 +40,28 @@ funcall env (Symbol f) args      = lambdaApply env (symbolLookup env f) args
 funcall env e ags                = Error $ "Function not a symbol: " ++ show e
 
 isFunction :: Environment -> Expr -> Bool
+isFunction env e@(Cons _)   = isFunction env (eval env e)
 isFunction env (Symbol s)   = case symbolLookup env s of
                                 Symbol _ -> True
                                 _        -> False
-isFunction _ (Lambda _ _) = True
-isFunction _ (Macro _ _)    = False
-isFunction _ Nil          = False
-isFunction _ (LispInt _)  = False
-isFunction _ (Error _)    = False
-isFunction env e            = isFunction env (eval env e)
+isFunction _   (Lambda _ _) = True
+isFunction _   _            = False
 
 isMacro :: Environment -> Expr -> Bool
-isMacro env (Symbol s)      = case symbolLookup env s of
-                                Macro _ _ -> True
-                                _         -> False
-isMacro _ (Macro _ _)      = True
-isMacro _ (Lambda _ _) = False
-isMacro _ Nil          = False
-isMacro _ (LispInt _)  = False
-isMacro _ (Error _)    = False
-isMacro env e            = isMacro env (eval env e)
+isMacro env e@(Cons _)   = isMacro env (eval env e)
+isMacro env (Symbol s)   = case symbolLookup env s of
+                             Macro _ _ -> True
+                             _         -> False
+isMacro _   (Macro _ _)  = True
+isMacro _   _            = False
 
 isSpecialForm :: Environment -> Expr -> Bool
+isSpecialForm env e@(Cons _)      = isSpecialForm env (eval env e)
 isSpecialForm env (Symbol s)      = case symbolLookup env s of
                                       SpecialForm _ -> True
-                                      _         -> False
-isSpecialForm _ (Macro _ _)      = False
-isSpecialForm _ (Lambda _ _) = False
-isSpecialForm _ (SpecialForm _)    = True
-isSpecialForm _ Nil          = False
-isSpecialForm _ (LispInt _)  = False
-isSpecialForm _ (Error _)    = False
-isSpecialForm env e            = isSpecialForm env (eval env e)
+                                      _             -> False
+isSpecialForm _   (SpecialForm _) = True
+isSpecialForm _   _               = False
 
 lambdaApply :: Environment -> Expr -> [Expr] -> Expr
 lambdaApply env (Lambda [params] body) args = undefined

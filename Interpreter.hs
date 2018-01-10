@@ -1,34 +1,9 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+module Interpreter where
+
+import Types
 import qualified Data.Map as M
-import Text.Show.Functions
-
-data Expr = Nil
-          | Cons [Expr]
-          | LispInt Int
-          | Symbol SymbolT
-          | Lambda [SymbolT] Expr
-          | Error String
-          | Macro [SymbolT] Expr
-          | SpecialForm (Environment -> [Expr] -> (Expr, Environment))
-          | Multiple [Expr]
-          deriving Show
-
-type SymbolT = String
-
-type Environment = M.Map SymbolT Expr
-
-defaultEnv = M.insert "eval" (SpecialForm (\env [e] -> eval env e))
-  $ M.insert "define" (SpecialForm (\env [Symbol s, e] -> (e, M.insert s e env)))
-  $ M.insert "quote" (SpecialForm (\env [a] -> (a, env))) M.empty
-
-example = Cons [Symbol "quote", Cons [Nil, LispInt 4]]
-example2 = Cons [Symbol "eval", example]
-example3 = Cons [Lambda ["a", "b"] (Symbol "b"), LispInt 10, LispInt 5]
-example4 = Multiple
-           [Cons [Symbol "define", Symbol "first", Lambda ["a", "b"] (Symbol "a")],
-            Cons [Symbol "define", Symbol "num", LispInt 3],
-            Cons [Symbol "first", Symbol "num", LispInt 2]]
 
 eval :: Environment -> Expr -> (Expr, Environment)
 eval env (Multiple []) = (Error "Trying to evaluate 0 expressions.", env)

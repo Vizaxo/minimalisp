@@ -22,6 +22,7 @@ defaultEnv = M.insert "eval" (SpecialForm (\env [a] -> eval env a)) --Placeholde
 
 example = Cons [Symbol "quote", Cons [Nil, LispInt 4]]
 example2 = Cons [Symbol "eval", example]
+example3 = Cons [Lambda ["a", "b"] (Symbol "b"), LispInt 10, LispInt 5]
 
 eval :: Environment -> Expr -> Expr
 eval env (Cons (e:args))
@@ -55,8 +56,11 @@ isSpecialForm _   (SpecialForm _) = True
 isSpecialForm _   _               = False
 
 lambdaApply :: Environment -> Expr -> [Expr] -> Expr
-lambdaApply env (Lambda [params] body) args = undefined
-lambdaApply _   _                      _    = Error "Trying to apply an object which isn't a lambda."
+lambdaApply env (Lambda (p:ps) body) (a:as) = lambdaApply (M.insert p a env) (Lambda ps body) as
+lambdaApply env (Lambda []     body) []     = eval env body
+lambdaApply env (Lambda []     body) _      = Error "Trying to apply a lambda to too many arguments."
+lambdaApply env (Lambda _      body) []     = Error "Trying to apply a lambda to too few arguments."
+lambdaApply _   _                    _      = Error "Trying to apply an object which isn't a lambda."
 
 symbolLookup :: Environment -> SymbolT -> Expr
 symbolLookup env s = case M.lookup s env of

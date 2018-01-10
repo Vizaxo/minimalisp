@@ -24,22 +24,21 @@ example = Cons [Symbol "quote", Cons [Nil, LispInt 4]]
 example2 = Cons [Symbol "eval", example]
 
 eval :: Environment -> Expr -> Expr
-eval env Nil                  = Nil
-eval env (Cons ((SpecialForm f):args)) = f env args
-eval env (Cons (s@(Symbol sText):args)) | isFunction env s = funcall env (eval env s) (map (eval env) args)
-                         | isMacro env s    = eval env $ macroExpand env (eval env s) args
-                         | isSpecialForm env s = apply (symbolLookup env sText)
-                         where apply (SpecialForm f) = f env args
-                               apply expr = Error "Not special form"
-eval env (LispInt i)          = LispInt i
-eval env (Lambda params body) = undefined
-eval env (Error e)            = Error e
-eval env (SpecialForm f)      = SpecialForm f
-eval env (Symbol s)           = symbolLookup env s
+eval env (Cons (s@(Symbol _):args))
+  | isFunction env s       = funcall env s (map (eval env) args)
+  | isMacro env s          = eval env $ macroExpand env (eval env s) args
+  | isSpecialForm env s    = apply (eval env s)
+  where apply (SpecialForm f) = f env args
+        apply _               = Error "Not special form"
+eval env (Symbol s)        = symbolLookup env s
+eval _   e@Nil             = e
+eval _   e@(LispInt _)     = e
+eval _   e@(Lambda _ _)    = e
+eval _   e@(Error _)       = e
+eval _   e@(SpecialForm _) = e
 
 funcall :: Environment -> Expr -> [Expr] -> Expr
-funcall env (Symbol f) args      = lambdaApply env (symbolLookup env f) args
-funcall env e ags                = Error $ "Function not a symbol: " ++ show e
+funcall env e args = lambdaApply env (eval env e) args
 
 isFunction :: Environment -> Expr -> Bool
 isFunction env e@(Cons _)   = isFunction env (eval env e)
@@ -50,12 +49,12 @@ isFunction _   (Lambda _ _) = True
 isFunction _   _            = False
 
 isMacro :: Environment -> Expr -> Bool
-isMacro env e@(Cons _)   = isMacro env (eval env e)
-isMacro env (Symbol s)   = case symbolLookup env s of
-                             Macro _ _ -> True
-                             _         -> False
-isMacro _   (Macro _ _)  = True
-isMacro _   _            = False
+isMacro env e@(Cons _)  = isMacro env (eval env e)
+isMacro env (Symbol s)  = case symbolLookup env s of
+                            Macro _ _ -> True
+                            _         -> False
+isMacro _   (Macro _ _) = True
+isMacro _   _           = False
 
 isSpecialForm :: Environment -> Expr -> Bool
 isSpecialForm env e@(Cons _)      = isSpecialForm env (eval env e)
@@ -67,7 +66,7 @@ isSpecialForm _   _               = False
 
 lambdaApply :: Environment -> Expr -> [Expr] -> Expr
 lambdaApply env (Lambda [params] body) args = undefined
-lambdaApply _ _ _ = Error "Trying to apply an object which isn't a lambda."
+lambdaApply _   _                      _    = Error "Trying to apply an object which isn't a lambda."
 
 symbolLookup :: Environment -> SymbolT -> Expr
 symbolLookup env s = case M.lookup s env of

@@ -10,24 +10,26 @@ data Expr = Nil
           | Lambda [SymbolT] Expr
           | Error String
           | Macro [SymbolT] Expr
-          | SpecialForm ([Expr] -> Expr)
+          | SpecialForm (Environment -> [Expr] -> Expr)
           deriving Show
 
 type SymbolT = String
 
 type Environment = M.Map SymbolT Expr
 
-defaultEnv = M.insert "quote" (SpecialForm (\[a] -> a)) M.empty
+defaultEnv = M.insert "eval" (SpecialForm (\env [a] -> eval env a)) --Placeholder for eval
+  $ M.insert "quote" (SpecialForm (\_ [a] -> a)) M.empty
 
 example = Cons [Symbol "quote", Cons [Nil, LispInt 4]]
+example2 = Cons [Symbol "eval", example]
 
 eval :: Environment -> Expr -> Expr
 eval env Nil                  = Nil
-eval env (Cons ((SpecialForm f):args)) = f args
+eval env (Cons ((SpecialForm f):args)) = f env args
 eval env (Cons (s@(Symbol sText):args)) | isFunction env s = funcall env (eval env s) (map (eval env) args)
                          | isMacro env s    = eval env $ macroExpand env (eval env s) args
                          | isSpecialForm env s = apply (symbolLookup env sText)
-                         where apply (SpecialForm f) = f args
+                         where apply (SpecialForm f) = f env args
                                apply expr = Error "Not special form"
 eval env (LispInt i)          = LispInt i
 eval env (Symbol s)           = Symbol s

@@ -6,10 +6,13 @@ import qualified Data.Map as M
 
 specialForms =
   M.insert "lambda" (SpecialForm lambda) $
-  M.insert "eval"   (SpecialForm (\env [e] -> eval env e)) $
+  M.insert "eval"   (SpecialForm evalSpecialForm) $
   M.insert "define" (SpecialForm (\env [Symbol s, e] -> (eval' env e, M.insert s (eval' env e) env))) $
   M.insert "quote"  (SpecialForm (\env [a] -> (a, env))) $
   M.empty
+
+evalSpecialForm env [e] = eval env' e'
+  where (e', env') = eval env e
 
 lambda env f = (lambda' f, env)
   where lambda' ((Cons args):[]) = Error "Lambda has no body."

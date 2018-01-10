@@ -24,12 +24,14 @@ example = Cons [Symbol "quote", Cons [Nil, LispInt 4]]
 example2 = Cons [Symbol "eval", example]
 
 eval :: Environment -> Expr -> Expr
-eval env (Cons (s@(Symbol _):args))
-  | isFunction env s       = funcall env s (map (eval env) args)
-  | isMacro env s          = eval env $ macroExpand env (eval env s) args
-  | isSpecialForm env s    = apply (eval env s)
+eval env (Cons (e:args))
+  | isFunction env e'      = funcall env e' (map (eval env) args)
+  | isMacro env e'         = eval env $ macroExpand env e' args
+  | isSpecialForm env e'   = apply e'
+  | otherwise              = Error $ "Could not apply expression " ++ show e
   where apply (SpecialForm f) = f env args
         apply _               = Error "Not special form"
+        e' = eval env e
 eval env (Symbol s)        = symbolLookup env s
 eval _   e@Nil             = e
 eval _   e@(LispInt _)     = e
@@ -41,26 +43,14 @@ funcall :: Environment -> Expr -> [Expr] -> Expr
 funcall env e args = lambdaApply env (eval env e) args
 
 isFunction :: Environment -> Expr -> Bool
-isFunction env e@(Cons _)   = isFunction env (eval env e)
-isFunction env (Symbol s)   = case symbolLookup env s of
-                                Symbol _ -> True
-                                _        -> False
 isFunction _   (Lambda _ _) = True
 isFunction _   _            = False
 
 isMacro :: Environment -> Expr -> Bool
-isMacro env e@(Cons _)  = isMacro env (eval env e)
-isMacro env (Symbol s)  = case symbolLookup env s of
-                            Macro _ _ -> True
-                            _         -> False
 isMacro _   (Macro _ _) = True
 isMacro _   _           = False
 
 isSpecialForm :: Environment -> Expr -> Bool
-isSpecialForm env e@(Cons _)      = isSpecialForm env (eval env e)
-isSpecialForm env (Symbol s)      = case symbolLookup env s of
-                                      SpecialForm _ -> True
-                                      _             -> False
 isSpecialForm _   (SpecialForm _) = True
 isSpecialForm _   _               = False
 

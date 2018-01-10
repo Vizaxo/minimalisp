@@ -1,23 +1,20 @@
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 module Interpreter where
 
 import Types
 import qualified Data.Map as M
 
 eval :: Environment -> Expr -> (Expr, Environment)
-eval env (Multiple []) = (Error "Trying to evaluate 0 expressions.", env)
-eval env (Multiple [e]) = eval env' e
+eval env (Multiple [])     = (Error "Trying to evaluate 0 expressions.", env)
+eval env (Multiple [e])    = eval env' e
   where (_, env') = eval env e
 eval env (Multiple (e:es)) = eval env' (Multiple es)
   where (_, env') = eval env e
 eval env (Cons (e:args))
-  | isFunction env e'      = (funcall env e' (map (eval' env) args), env)
-  | isMacro env e'         = eval env $ macroExpand env e' (Multiple args)
+  | isFunction    env e'   = (lambdaApply env e' (map (eval' env) args), env)
+  | isMacro       env e'   = eval env $ macroExpand env e' (Multiple args)
   | isSpecialForm env e'   = apply e'
   | otherwise              = (Error $ "Could not apply expression " ++ show e, env)
   where apply (SpecialForm f) = f env args
-        apply _               = (Error "Not special form", env)
         e' = eval' env e
 eval env (Symbol s)        = (symbolLookup env s, env)
 eval env e@Nil             = (e, env)
@@ -28,9 +25,6 @@ eval env e@(SpecialForm _) = (e, env)
 
 eval' :: Environment -> Expr -> Expr
 eval' env = fst . (eval env)
-
-funcall :: Environment -> Expr -> [Expr] -> Expr
-funcall env e args = lambdaApply env (eval' env e) args
 
 isFunction :: Environment -> Expr -> Bool
 isFunction _   (Lambda _ _) = True
@@ -54,7 +48,7 @@ lambdaApply _   _                    _      = Error "Trying to apply an object w
 symbolLookup :: Environment -> SymbolT -> Expr
 symbolLookup env s = case M.lookup s env of
                        Just e  -> e
-                       Nothing -> Error $ "Symbol definition for " ++ show s ++ " not found."
+                       Nothing -> Error $ "Symbol definition for " ++ s ++ " not found."
 
 macroExpand :: Environment -> Expr -> Expr -> Expr
 macroExpand = undefined

@@ -32,10 +32,10 @@ eval env (Cons (s@(Symbol sText):args)) | isFunction env s = funcall env (eval e
                          where apply (SpecialForm f) = f env args
                                apply expr = Error "Not special form"
 eval env (LispInt i)          = LispInt i
-eval env (Symbol s)           = Symbol s
 eval env (Lambda params body) = undefined
 eval env (Error e)            = Error e
 eval env (SpecialForm f)      = SpecialForm f
+eval env (Symbol s)           = symbolLookup env s
 
 funcall :: Environment -> Expr -> [Expr] -> Expr
 funcall env (Symbol f) args      = lambdaApply env (symbolLookup env f) args

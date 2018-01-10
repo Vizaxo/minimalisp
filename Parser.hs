@@ -9,7 +9,7 @@ parseExpr input = result $ parse multipleExpr "" input
   where result (Left err) = Error $ show err
         result (Right e)  = e
 
-multipleExpr = Multiple <$> many1 expr
+multipleExpr = Multiple <$> many1 expr <* eof
 
 expr :: Parser Expr
 expr = (many space) *> singleExpr <* (many space)
